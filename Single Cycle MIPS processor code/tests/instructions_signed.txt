@@ -1,0 +1,8 @@
+2010FFFF  // addi $16,$0,-1
+20110001  // addi $17,$0,1
+0211902A  // slt $18,$16,$17 (signed: $18 = -1 < 1 = 1)
+0211982B  // sltu $19,$16,$17 (unsigned: $19 = 2^32-1 < 1 = 0)
+AC120000  // sw $18,0($0) (Store $18 at address 0)
+AC130004  // sw $19,4($0) (Store $19 at address 4)
+2414FFFB  // addiu $20,$0,-5 (unsigned addi with sign-extended imm)
+AC140008  // sw $20,8($0) (Store $20 at address 8)

@@ -1,0 +1,14 @@
+/* instructions [0]  = */ 00008020  // add $16,$0,$0;
+/* instructions [1]  = */ 20100078  // addi $16,$0,120;
+/* instructions [2]  = */ 00008820  // add $17,$0,$0;
+/* instructions [3]  = */ 201100B4  // addi $17,$0,180;
+/* instructions [4]  = */ 00009020  // add $18,$0,$0;
+/* instructions [5]  = */ 12110006  // beq $16,$17,target1;
+/* instructions [6]  = */ 0211482A  // slt $9,$16,17;
+/* instructions [7]  = */ 11200002  // beq $9,$0,target2;
+/* instructions [8]  = */ 02308822  // sub $17,$17,$16;
+/* instructions [9]  = */ 08000005  // j 0x14;
+/* instructions [10] = */ 02118022  // target2: sub $16,$16,$17;
+/* instructions [11] = */ 08000005  // j 0x14;
+/* instructions [12] = */ 00109020  // terget1: add $18,$0,$16;
+/* instructions [13] = */ AC120000  // sw $18,0($0);

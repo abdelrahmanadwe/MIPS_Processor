@@ -1,0 +1,5 @@
+20000005  // addi $0,$0,5 (attempt to write 5 to register 0 - should be ignored!)
+20100000  // addi $16,$0,0 (reads register 0 - should return 0, loads 0 into $16)
+AC100000  // sw $16,0($0) (stores RAM[0] = 0)
+2011002A  // addi $17,$0,42 (loads 42 into $17)
+AC110004  // sw $17,4($0) (stores RAM[4] = 42)

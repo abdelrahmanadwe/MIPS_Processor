@@ -7,14 +7,21 @@ module Single_Cycle_MIPS_Microprocessor(
 	wire [31:0] instruction;
 	wire [31:0] readData1Reg, readData2Reg, writeDataReg, readDataRam, WriteDataRam, ALUResult, SignImm, SrcA, SrcB;
 	wire [31:0] beqshiftout;
-	wire MemToReg, MemWrite, Branch, ALUSrc, RegDst, RegWrite, Jump, MemRead;
+	wire MemWrite, Branch, ALUSrc, RegWrite, MemRead;
+	wire [1:0] MemToReg, RegDst, Jump;
+	wire Bne;
 	wire [4:0] Address1ReadReg, Address2ReadReg, Address3WriteReg;
 
     wire [5:0] opcode;
     wire [5:0] funct;
-    wire [2:0] ALUControl;
+    wire [3:0] ALUControl;
     wire [1:0] ALUOp;
 	wire zero;
+	wire is_signed;
+	wire [4:0] shamt;
+	wire [1:0] MemSize;
+	wire MemUnsigned;
+	wire [1:0] ExtOp;
 	
 	ProgramCounter pc(
 		.ProgramCounterOut(PCCurrentInstruction),
@@ -37,12 +44,10 @@ module Single_Cycle_MIPS_Microprocessor(
 	assign Address1ReadReg = instruction[25:21];
 	assign Address2ReadReg = instruction[20:16];
 	
-	mux_2x1 #(.N(32)) address3writeregistermux(
-		.MuxOut(Address3WriteReg),
-		.MuxIn1(instruction[20:16]),
-		.MuxIn2(instruction[15:11]),
-		.sel(RegDst)
-	);
+	// Select Write Register index: rt (00), rd (01), or $ra (10)
+	assign Address3WriteReg = (RegDst == 2'b10) ? 5'd31 :
+	                          (RegDst == 2'b01) ? instruction[15:11] :
+	                          instruction[20:16];
 
 	RegisterFile registers(
 		.ReadData1(readData1Reg),
@@ -55,9 +60,10 @@ module Single_Cycle_MIPS_Microprocessor(
 		.Address3Write(Address3WriteReg),
 		.WriteData(writeDataReg)  
 	);
-	Sign_Extand sign(
+	Sign_Extand sign_extand(
 		.out(SignImm),
-		.in(instruction[15:0])
+		.in(instruction[15:0]),
+		.ExtOp(ExtOp)
 	);
 	
 	Shift_Left_Twice #(.in_width(32),.out_width(32)) beqshift(
@@ -70,24 +76,20 @@ module Single_Cycle_MIPS_Microprocessor(
 		.in1(beqshiftout),
 		.in2(PCPlus4)
 	);
-	mux_2x1 #(.N(32)) branchornotmux(
-		.MuxOut(PCBranchOrNot),
-		.MuxIn1(PCPlus4),
-		.MuxIn2(PCBranch),
-		.sel(Branch&zero)
-	);
+
+	// Branch logic: branch if (Branch and equal condition met) OR (Branch and not equal condition met)
+	wire branch_taken = Branch & (zero ^ Bne);
+	assign PCBranchOrNot = branch_taken ? PCBranch : PCPlus4;
 	
 	Shift_Left_Twice #(.in_width(26),.out_width(32)) jumpshift(
 		.out(PCJump),
 		.in(instruction[25:0])
 	);
 	
-	mux_2x1 #(.N(32)) jumpornotmux(
-		.MuxOut(PCNextInstruction),
-		.MuxIn1(PCBranchOrNot),
-		.MuxIn2({PCPlus4[31:28],PCJump[27:0]}),
-		.sel(Jump)
-	);
+	// Next PC: Jump Register (10), Standard Jump (01), or branch/default (00)
+	assign PCNextInstruction = (Jump == 2'b10) ? readData1Reg :
+	                           (Jump == 2'b01) ? {PCPlus4[31:28], PCJump[27:0]} :
+	                           PCBranchOrNot;
 	
 	mux_2x1 #(.N(32)) SrcBmux(
 		.MuxOut(SrcB),
@@ -97,12 +99,15 @@ module Single_Cycle_MIPS_Microprocessor(
 	);
 	
 	assign SrcA = readData1Reg;
+	assign shamt = instruction[10:6];
 	ALU_32_bits ALU(
 		.ALUResult(ALUResult),
 		.Zero(zero),
 		.SrcA(SrcA),
 		.SrcB(SrcB),
-		.ALUControl(ALUControl)
+		.ALUControl(ALUControl),
+		.is_signed(is_signed),
+		.shamt(shamt)
 	);
 	
 	// Extract opcode and funct fields from instruction
@@ -117,6 +122,11 @@ module Single_Cycle_MIPS_Microprocessor(
 		.Branch(Branch),        
 		.Jump(Jump),         
 		.ALUControl(ALUControl),
+		.is_signed(is_signed),
+		.MemSize(MemSize),
+		.MemUnsigned(MemUnsigned),
+		.ExtOp(ExtOp),
+		.Bne(Bne),
 		.opcode(opcode),      
 		.funct(funct)    
 	);
@@ -129,36 +139,14 @@ module Single_Cycle_MIPS_Microprocessor(
 		.Reset(reset),
 		.Address(ALUResult),      
 		.WriteData(WriteDataRam),    
-		.WriteEnable(MemWrite)   
+		.WriteEnable(MemWrite),
+		.MemSize(MemSize),
+		.MemUnsigned(MemUnsigned)
 	);
 	
-	mux_2x1 #(.N(32)) loademux(
-		.MuxOut(writeDataReg),
-		.MuxIn1(ALUResult),
-		.MuxIn2(readDataRam),
-		.sel(MemToReg)
-	);
+	// Select register write data: ALUResult (00), readDataRam (01), or PCPlus4 (10)
+	assign writeDataReg = (MemToReg == 2'b10) ? PCPlus4 :
+	                      (MemToReg == 2'b01) ? readDataRam :
+	                      ALUResult;
 
-endmodule
-
-`timescale 1ns/1ps
-module Single_Cycle_MIPS_Microprocessor_tb();
-
-	reg clock ,reset;
-	wire [15:0] TestValue;
-	
-	Single_Cycle_MIPS_Microprocessor MIPS(
-		.TestValue(TestValue),
-		.reset(reset),
-		.clock(clock)
-	);
-	
-	initial begin
-		clock = 0;
-		forever #10 clock = ~clock;
-	end
-	initial begin
-		reset = 0;
-		# 20 reset = 1;
-	end
 endmodule
