@@ -8,7 +8,8 @@ module Single_Cycle_MIPS_Microprocessor(
 	wire [31:0] readData1Reg, readData2Reg, writeDataReg, readDataRam, WriteDataRam, ALUResult, SignImm, SrcA, SrcB;
 	wire [31:0] beqshiftout;
 	wire MemWrite, Branch, ALUSrc, RegWrite, MemRead;
-	wire [1:0] MemToReg, RegDst, Jump;
+	wire [1:0] RegDst, Jump;
+	wire [2:0] MemToReg;
 	wire Bne;
 	wire [4:0] Address1ReadReg, Address2ReadReg, Address3WriteReg;
 
@@ -22,6 +23,8 @@ module Single_Cycle_MIPS_Microprocessor(
 	wire [1:0] MemSize;
 	wire MemUnsigned;
 	wire [1:0] ExtOp;
+	wire hi_write, lo_write;
+	wire [1:0] HILOSrc;
 	
 	ProgramCounter pc(
 		.ProgramCounterOut(PCCurrentInstruction),
@@ -109,6 +112,47 @@ module Single_Cycle_MIPS_Microprocessor(
 		.is_signed(is_signed),
 		.shamt(shamt)
 	);
+
+	// Multiplication Unit (Modular, external block)
+	wire [63:0] mul_product;
+	multiplier multiplier_inst(
+		.a(SrcA),
+		.b(readData2Reg),
+		.is_signed(is_signed),
+		.product(mul_product)
+	);
+
+	// Division Unit (Modular, external block)
+	wire [31:0] div_quotient;
+	wire [31:0] div_remainder;
+	divider divider_inst(
+		.a(SrcA),
+		.b(readData2Reg),
+		.is_signed(is_signed),
+		.quotient(div_quotient),
+		.remainder(div_remainder)
+	);
+
+	// Select inputs for special HI and LO registers
+	wire [31:0] hi_in = (HILOSrc == 2'b10) ? SrcA :
+	                    (HILOSrc == 2'b01) ? div_remainder :
+	                    mul_product[63:32];
+	wire [31:0] lo_in = (HILOSrc == 2'b10) ? SrcA :
+	                    (HILOSrc == 2'b01) ? div_quotient :
+	                    mul_product[31:0];
+
+	// Special HI and LO registers
+	reg [31:0] HI, LO;
+	always @(posedge clock or negedge reset) begin
+		if (!reset) begin
+			HI <= 32'b0;
+			LO <= 32'b0;
+		end
+		else begin
+			if (hi_write) HI <= hi_in;
+			if (lo_write) LO <= lo_in;
+		end
+	end
 	
 	// Extract opcode and funct fields from instruction
     assign opcode = instruction[31:26];
@@ -127,6 +171,9 @@ module Single_Cycle_MIPS_Microprocessor(
 		.MemUnsigned(MemUnsigned),
 		.ExtOp(ExtOp),
 		.Bne(Bne),
+		.hi_write(hi_write),
+		.lo_write(lo_write),
+		.HILOSrc(HILOSrc),
 		.opcode(opcode),      
 		.funct(funct)    
 	);
@@ -144,9 +191,11 @@ module Single_Cycle_MIPS_Microprocessor(
 		.MemUnsigned(MemUnsigned)
 	);
 	
-	// Select register write data: ALUResult (00), readDataRam (01), or PCPlus4 (10)
-	assign writeDataReg = (MemToReg == 2'b10) ? PCPlus4 :
-	                      (MemToReg == 2'b01) ? readDataRam :
+	// Select register write data: ALUResult (000), readDataRam (001), PCPlus4 (010), HI (011), LO (100)
+	assign writeDataReg = (MemToReg == 3'b100) ? LO :
+	                      (MemToReg == 3'b011) ? HI :
+	                      (MemToReg == 3'b010) ? PCPlus4 :
+	                      (MemToReg == 3'b001) ? readDataRam :
 	                      ALUResult;
 
 endmodule

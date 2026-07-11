@@ -27,6 +27,14 @@ All R-type instructions have an opcode of `000000` and are distinguished by thei
 | **`srav`** | `000111` | `7` | `srav rd, rt, rs` | Variable Shift Right Arithmetic: `rd = rt >>> rs` |
 | **`jr`** | `001000` | `8` | `jr rs` | Jump Register: `PC = rs` |
 | **`jalr`** | `001001` | `9` | `jalr rs` | Jump and Link Register: `$ra = PC + 4; PC = rs` |
+| **`mfhi`** | `010000` | `16` | `mfhi rd` | Move From HI: `rd = HI` |
+| **`mthi`** | `010001` | `17` | `mthi rs` | Move To HI: `HI = rs` |
+| **`mflo`** | `010010` | `18` | `mflo rd` | Move From LO: `rd = LO` |
+| **`mtlo`** | `010011` | `19` | `mtlo rs` | Move To LO: `LO = rs` |
+| **`mult`** | `011000` | `24` | `mult rs, rt` | Signed Multiply: `{HI, LO} = rs * rt` |
+| **`multu`** | `011001` | `25` | `multu rs, rt` | Unsigned Multiply: `{HI, LO} = rs * rt` |
+| **`div`** | `011010` | `26` | `div rs, rt` | Signed Divide: `LO = rs / rt; HI = rs % rt` |
+| **`divu`** | `011011` | `27` | `divu rs, rt` | Unsigned Divide: `LO = rs / rt; HI = rs % rt` |
 
 ---
 
@@ -72,3 +80,5 @@ J-type instructions use target offsets shift-lefted by 2 to jump to a large rang
 
 - **Register `$0` (`$zero`)**: Hardwired directly to `32'b0`. All reads return `0`, and all write requests to `$0` are safely ignored by the hardware inside the Register File.
 - **Register `$31` (`$ra`)**: Return address register. Written to automatically by `jal` and `jalr` instructions, but can also be read/written by general-purpose software (e.g. for context saving/restoring).
+- **Registers `HI` and `LO`**: 32-bit special-purpose registers holding results of multiplication and division. Updated automatically by `mult`, `multu`, `div`, and `divu`, or explicitly using `mthi` and `mtlo` instructions. Can be read using `mfhi` and `mflo` instructions.
+
