@@ -1,4 +1,9 @@
-module Single_Cycle_MIPS_Microprocessor(
+module Single_Cycle_MIPS_Microprocessor #(
+    parameter IM_START_ADDR = 32'h0000_0000,
+    parameter IM_END_ADDR   = 32'h0000_0FFF,
+    parameter DM_START_ADDR = 32'h0000_1000,
+    parameter DM_END_ADDR   = 32'h0000_7FFF
+)(
 	output [15:0] TestValue,
 	input reset,
 	input clock
@@ -39,7 +44,10 @@ module Single_Cycle_MIPS_Microprocessor(
 		.in2(32'b100)
 	);
 	
-	InstructionMemory ROM(
+	InstructionMemory #(
+		.START_ADDR(IM_START_ADDR),
+		.END_ADDR(IM_END_ADDR)
+	) ROM(
 		.instruction(instruction), 
 		.Address(PCCurrentInstruction)       
 	);
@@ -80,8 +88,38 @@ module Single_Cycle_MIPS_Microprocessor(
 		.in2(PCPlus4)
 	);
 
-	// Branch logic: branch if (Branch and equal condition met) OR (Branch and not equal condition met)
-	wire branch_taken = Branch & (zero ^ Bne);
+	// Opcode and rt decoding for branches
+	wire is_beq  = (opcode == 6'b000100);
+	wire is_bne  = (opcode == 6'b000101);
+	wire is_blez = (opcode == 6'b000110);
+	wire is_bgtz = (opcode == 6'b000111);
+	wire is_regimm = (opcode == 6'b000001);
+	wire is_bltz = is_regimm && (instruction[20:16] == 5'b00000);
+	wire is_bgez = is_regimm && (instruction[20:16] == 5'b00001);
+
+	// Branch condition evaluations
+	wire rs_zero = (readData1Reg == 32'b0);
+	wire rs_negative = readData1Reg[31];
+
+	reg branch_condition_met;
+	always @(*) begin
+		if (is_beq)
+			branch_condition_met = zero;
+		else if (is_bne)
+			branch_condition_met = !zero;
+		else if (is_blez)
+			branch_condition_met = (rs_negative || rs_zero);
+		else if (is_bgtz)
+			branch_condition_met = (!rs_negative && !rs_zero);
+		else if (is_bltz)
+			branch_condition_met = rs_negative;
+		else if (is_bgez)
+			branch_condition_met = !rs_negative;
+		else
+			branch_condition_met = 1'b0;
+	end
+
+	wire branch_taken = Branch & branch_condition_met;
 	assign PCBranchOrNot = branch_taken ? PCBranch : PCPlus4;
 	
 	Shift_Left_Twice #(.in_width(26),.out_width(32)) jumpshift(
@@ -179,7 +217,10 @@ module Single_Cycle_MIPS_Microprocessor(
 	);
 	
 	assign WriteDataRam = readData2Reg;
-	Data_Memory RAM(
+	Data_Memory #(
+		.START_ADDR(DM_START_ADDR),
+		.END_ADDR(DM_END_ADDR)
+	) RAM(
 		.ReadData(readDataRam),     
 		.TestValue(TestValue),    
 		.Clock(clock),

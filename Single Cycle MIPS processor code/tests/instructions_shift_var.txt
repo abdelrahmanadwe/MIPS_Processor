@@ -1,8 +1,0 @@
-20100004  // addi $16,$0,4 (loads shift amount 4 into $16)
-2011FFF0  // addi $17,$0,-16 (loads value FFFFFFF0 into $17)
-02119004  // sllv $18,$17,$16 (shift left logical variable -> FFFFFF00)
-02119806  // srlv $19,$17,$16 (shift right logical variable -> 0FFFFFFF)
-0211A007  // srav $20,$17,$16 (shift right arithmetic variable -> FFFFFFFF)
-AC120000  // sw $18,0($0) (Store SLLV result at address 0)
-AC130004  // sw $19,4($0) (Store SRLV result at address 4)
-AC140008  // sw $20,8($0) (Store SRAV result at address 8)

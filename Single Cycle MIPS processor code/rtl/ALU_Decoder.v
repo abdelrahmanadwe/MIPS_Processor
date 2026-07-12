@@ -17,7 +17,8 @@ module ALUDecoder(
 			  SRLV = 4'b1010,
 			  SRAV = 4'b1011,
 			  XOR  = 4'b1100,
-			  LUI  = 4'b1101;
+			  LUI  = 4'b1101,
+			  NOR  = 4'b1110;
 
     always @(*) begin
         case(ALUOp)
@@ -33,6 +34,8 @@ module ALUDecoder(
                     6'b100101: ALUControl = OR;   // OR
                     6'b101010: ALUControl = SLT;  // SLT
                     6'b101011: ALUControl = SLT;  // SLTU
+                    6'b100110: ALUControl = XOR;  // XOR
+                    6'b100111: ALUControl = NOR;  // NOR
                     6'b011100: ALUControl = MUL;  // MUL
                     6'b000000: ALUControl = SLL;  // SLL
                     6'b000010: ALUControl = SRL;  // SRL

@@ -18,6 +18,8 @@ All R-type instructions have an opcode of `000000` and are distinguished by thei
 | **`or`** | `100101` | `37` | `or rd, rs, rt` | Bitwise OR: `rd = rs \| rt` |
 | **`slt`** | `101010` | `42` | `slt rd, rs, rt` | Signed Compare: `rd = (rs < rt) ? 1 : 0` |
 | **`sltu`** | `101011` | `43` | `sltu rd, rs, rt` | Unsigned Compare: `rd = (rs < rt) ? 1 : 0` |
+| **`xor`** | `100110` | `38` | `xor rd, rs, rt` | Bitwise XOR: `rd = rs ^ rt` |
+| **`nor`** | `100111` | `39` | `nor rd, rs, rt` | Bitwise NOR: `rd = ~(rs \| rt)` |
 | **`mul`** | `011100` | `28` | `mul rd, rs, rt` | Multiplication: `rd = rs * rt` (lower 32-bits) |
 | **`sll`** | `000000` | `0` | `sll rd, rt, shamt` | Constant Shift Left: `rd = rt << shamt` |
 | **`srl`** | `000010` | `2` | `srl rd, rt, shamt` | Constant Shift Right Logical: `rd = rt >> shamt` |
@@ -54,6 +56,10 @@ I-type instructions have unique opcodes. Arithmetic/comparison immediates are si
 | **`sh`** | `101001` | `41` | `sh rt, offset(rs)` | Sign-extended | Store Halfword: `RAM[rs + offset][15:0] = rt[15:0]` |
 | **`beq`** | `000100` | `4` | `beq rs, rt, offset` | Sign-extended | Branch Equal: `if (rs == rt) PC = PC + 4 + (offset << 2)` |
 | **`bne`** | `000101` | `5` | `bne rs, rt, offset` | Sign-extended | Branch Not Equal: `if (rs != rt) PC = PC + 4 + (offset << 2)` |
+| **`blez`** | `000110` | `6` | `blez rs, offset` | Sign-extended | Branch Less Than or Equal to Zero: `if (rs <= 0) PC = PC + 4 + (offset << 2)` |
+| **`bgtz`** | `000111` | `7` | `bgtz rs, offset` | Sign-extended | Branch Greater Than Zero: `if (rs > 0) PC = PC + 4 + (offset << 2)` |
+| **`bltz`** | `000001` | `1` | `bltz rs, offset` | Sign-extended | Branch Less Than Zero: `if (rs < 0) PC = PC + 4 + (offset << 2)` (rt = `00000`) |
+| **`bgez`** | `000001` | `1` | `bgez rs, offset` | Sign-extended | Branch Greater Than or Equal to Zero: `if (rs >= 0) PC = PC + 4 + (offset << 2)` (rt = `00001`) |
 | **`addi`** | `001000` | `8` | `addi rt, rs, imm` | Sign-extended | Add Immediate: `rt = rs + SignExtend(imm)` |
 | **`addiu`** | `001001` | `9` | `addiu rt, rs, imm` | Sign-extended | Add Immediate Unsigned: `rt = rs + SignExtend(imm)` |
 | **`slti`** | `001010` | `10` | `slti rt, rs, imm` | Sign-extended | Set Less Than Immediate: `rt = (rs < SignExtend(imm)) ? 1 : 0` |

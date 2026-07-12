@@ -20,7 +20,8 @@ module ALU_32_bits(
 			  SRLV = 4'b1010,
 			  SRAV = 4'b1011,
 			  XOR  = 4'b1100,
-			  LUI  = 4'b1101;
+			  LUI  = 4'b1101,
+			  NOR  = 4'b1110;
 
 	wire [32:0] adder_sub_sum;
 	wire is_sub = (ALUControl == SUB || ALUControl == SLT);
@@ -44,11 +45,12 @@ module ALU_32_bits(
 			SLT  : ALUResult = ((SrcA[31] == SrcB[31]) ? adder_sub_sum[31] : (is_signed ? SrcA[31] : SrcB[31])) ? 32'b1 : 32'b0;
 			SRL  : ALUResult = SrcB >> shamt ;
 			SRA  : ALUResult = $signed(SrcB) >>> shamt ;
-			SLLV : ALUResult = SrcB << SrcA ;
-			SRLV : ALUResult = SrcB >> SrcA ;
-			SRAV : ALUResult = $signed(SrcB) >>> SrcA ;
+			SLLV : ALUResult = SrcB << SrcA[4:0] ;
+			SRLV : ALUResult = SrcB >> SrcA[4:0] ;
+			SRAV : ALUResult = $signed(SrcB) >>> SrcA[4:0] ;
 			XOR  : ALUResult = SrcA ^ SrcB ;
 			LUI  : ALUResult = SrcB ;
+			NOR  : ALUResult = ~(SrcA | SrcB) ;
 			default: ALUResult = 32'b0;
 		endcase
 		if(ALUResult == 0) Zero = 1'b1; else Zero = 1'b0;

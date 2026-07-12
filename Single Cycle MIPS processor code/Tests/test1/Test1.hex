@@ -1,0 +1,26 @@
+20100af0          ; 1:  addi $s0, $0, 0x0AF0 
+201104b0          ; 2:  addi $s1, $0, 0x04B0 
+02119020          ; 3:  add $s2, $s0, $s1
+20080fa0          ; 4:  addi $t0, $0, 0x0FA0 
+12480001          ; 5:  beq $s2, $t0, NEXT1
+08000016          ; 6:  j ERROR
+02119822          ; 7:  NEXT1: sub $s3, $s0, $s1
+20090640          ; 8:  addi $t1, $0, 0x0640 
+12690001          ; 9:  beq $s3, $t1, NEXT2
+08000016          ; 10: j ERROR
+0211a024          ; 11: NEXT2: and $s4, $s0, $s1
+200a00b0          ; 12: addi $t2, $0, 0x00B0 
+128a0001          ; 13: beq $s4, $t2, NEXT3
+08000016          ; 14: j ERROR
+0211a825          ; 15: NEXT3: or $s5, $s0, $s1
+200b0ef0          ; 16: addi $t3, $0, 0x0EF0
+12ab0001          ; 17: beq $s5, $t3, NEXT4
+08000016          ; 18: j ERROR
+200c0064          ; 19: NEXT4: addi $t4, $0, 0x0064  
+ad900032          ; 20: sw $s0, 50($t4)
+8d8d0032          ; 21: lw $t5, 50($t4)
+120d0002          ; 22: beq $s0, $t5, DONE
+2010dead          ; 23: ERROR: addi $s0, $0, 0XDEAD
+08000019          ; 24: j SKIP
+2010d08e          ; 25: DONE:  addi $s0, $0, 0XD08E
+00000000          ; 26: SKIP: nop

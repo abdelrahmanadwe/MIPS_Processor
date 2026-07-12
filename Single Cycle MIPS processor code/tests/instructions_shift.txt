@@ -1,7 +1,0 @@
-2010FFF0  // addi $16,$0,-16 (loads FFFFFFF0 into $16)
-00108900  // sll $17,$16,4 (shifts left logical by 4 -> FFFFFF00)
-00109102  // srl $18,$16,4 (shifts right logical by 4 -> 0FFFFFFF)
-00109903  // sra $19,$16,4 (shifts right arithmetic by 4 -> FFFFFFFF)
-AC110000  // sw $17,0($0) (Store SLL result at address 0)
-AC120004  // sw $18,4($0) (Store SRL result at address 4)
-AC130008  // sw $19,8($0) (Store SRA result at address 8)

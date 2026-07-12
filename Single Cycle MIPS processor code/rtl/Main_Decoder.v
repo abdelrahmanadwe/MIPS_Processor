@@ -110,6 +110,15 @@ module MainDecoder(
                 Branch   = 1'b1;
                 Bne      = 1'b1;
             end
+            6'b000110: begin // blez
+                Branch   = 1'b1;
+            end
+            6'b000111: begin // bgtz
+                Branch   = 1'b1;
+            end
+            6'b000001: begin // regimm (bltz / bgez)
+                Branch   = 1'b1;
+            end
             6'b001000: begin // addi
                 RegWrite = 1'b1;
                 ALUSrc   = 1'b1;
