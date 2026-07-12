@@ -8,29 +8,33 @@ module Single_Cycle_MIPS_Microprocessor #(
 	input reset,
 	input clock
 );
-	wire [31:0] PCCurrentInstruction,PCPlus4, PCNextInstruction, PCBranch, PCBranchOrNot, PCJump ;
+	wire [31:0] PCCurrentInstruction, PCPlus4, PCNextInstruction, PCBranch, PCBranchOrNot, PCJump;
 	wire [31:0] instruction;
-	wire [31:0] readData1Reg, readData2Reg, writeDataReg, readDataRam, WriteDataRam, ALUResult, SignImm, SrcA, SrcB;
+	wire [31:0] readData1Reg, readData2Reg, writeDataReg, readDataRam, ALUResult, SignImm, SrcB;
 	wire [31:0] beqshiftout;
-	wire MemWrite, Branch, ALUSrc, RegWrite, MemRead;
+	wire MemWrite, Branch, ALUSrc, RegWrite;
 	wire [1:0] RegDst, Jump;
 	wire [2:0] MemToReg;
 	wire Bne;
-	wire [4:0] Address1ReadReg, Address2ReadReg, Address3WriteReg;
+	wire [4:0] Address3WriteReg;
 
-    wire [5:0] opcode;
-    wire [5:0] funct;
-    wire [3:0] ALUControl;
-    wire [1:0] ALUOp;
+	wire [3:0] ALUControl;
 	wire zero;
 	wire is_signed;
-	wire [4:0] shamt;
 	wire [1:0] MemSize;
 	wire MemUnsigned;
 	wire [1:0] ExtOp;
 	wire hi_write, lo_write;
 	wire [1:0] HILOSrc;
 	
+	wire branch_taken;
+	wire [63:0] mul_product;
+	wire [31:0] div_quotient;
+	wire [31:0] div_remainder;
+	wire [31:0] hi_in;
+	wire [31:0] lo_in;
+	wire [31:0] HI, LO;
+
 	ProgramCounter pc(
 		.ProgramCounterOut(PCCurrentInstruction),
 		.ProgramCounterIn(PCNextInstruction),
@@ -52,13 +56,13 @@ module Single_Cycle_MIPS_Microprocessor #(
 		.Address(PCCurrentInstruction)       
 	);
 	
-	assign Address1ReadReg = instruction[25:21];
-	assign Address2ReadReg = instruction[20:16];
-	
-	// Select Write Register index: rt (00), rd (01), or $ra (10)
-	assign Address3WriteReg = (RegDst == 2'b10) ? 5'd31 :
-	                          (RegDst == 2'b01) ? instruction[15:11] :
-	                          instruction[20:16];
+	mux_3x1 #(.N(5)) write_reg_mux (
+		.MuxOut(Address3WriteReg),
+		.MuxIn1(instruction[20:16]),
+		.MuxIn2(instruction[15:11]),
+		.MuxIn3(5'd31),
+		.sel(RegDst)
+	);
 
 	RegisterFile registers(
 		.ReadData1(readData1Reg),
@@ -66,11 +70,12 @@ module Single_Cycle_MIPS_Microprocessor #(
 		.Clock(clock),
 		.reset(reset),
 		.RegWrite(RegWrite),          
-		.Address1Read(Address1ReadReg), 
-		.Address2Read(Address2ReadReg), 
+		.Address1Read(instruction[25:21]), 
+		.Address2Read(instruction[20:16]), 
 		.Address3Write(Address3WriteReg),
 		.WriteData(writeDataReg)  
 	);
+
 	Sign_Extand sign_extand(
 		.out(SignImm),
 		.in(instruction[15:0]),
@@ -88,49 +93,34 @@ module Single_Cycle_MIPS_Microprocessor #(
 		.in2(PCPlus4)
 	);
 
-	// Opcode and rt decoding for branches
-	wire is_beq  = (opcode == 6'b000100);
-	wire is_bne  = (opcode == 6'b000101);
-	wire is_blez = (opcode == 6'b000110);
-	wire is_bgtz = (opcode == 6'b000111);
-	wire is_regimm = (opcode == 6'b000001);
-	wire is_bltz = is_regimm && (instruction[20:16] == 5'b00000);
-	wire is_bgez = is_regimm && (instruction[20:16] == 5'b00001);
+	Branch_Unit branch_unit_inst(
+		.opcode(instruction[31:26]),
+		.rt(instruction[20:16]),
+		.rs_value(readData1Reg),
+		.zero(zero),
+		.Branch(Branch),
+		.branch_taken(branch_taken)
+	);
 
-	// Branch condition evaluations
-	wire rs_zero = (readData1Reg == 32'b0);
-	wire rs_negative = readData1Reg[31];
-
-	reg branch_condition_met;
-	always @(*) begin
-		if (is_beq)
-			branch_condition_met = zero;
-		else if (is_bne)
-			branch_condition_met = !zero;
-		else if (is_blez)
-			branch_condition_met = (rs_negative || rs_zero);
-		else if (is_bgtz)
-			branch_condition_met = (!rs_negative && !rs_zero);
-		else if (is_bltz)
-			branch_condition_met = rs_negative;
-		else if (is_bgez)
-			branch_condition_met = !rs_negative;
-		else
-			branch_condition_met = 1'b0;
-	end
-
-	wire branch_taken = Branch & branch_condition_met;
-	assign PCBranchOrNot = branch_taken ? PCBranch : PCPlus4;
+	mux_2x1 #(.N(32)) pc_branch_mux (
+		.MuxOut(PCBranchOrNot),
+		.MuxIn1(PCPlus4),
+		.MuxIn2(PCBranch),
+		.sel(branch_taken)
+	);
 	
 	Shift_Left_Twice #(.in_width(26),.out_width(32)) jumpshift(
 		.out(PCJump),
 		.in(instruction[25:0])
 	);
 	
-	// Next PC: Jump Register (10), Standard Jump (01), or branch/default (00)
-	assign PCNextInstruction = (Jump == 2'b10) ? readData1Reg :
-	                           (Jump == 2'b01) ? {PCPlus4[31:28], PCJump[27:0]} :
-	                           PCBranchOrNot;
+	mux_3x1 #(.N(32)) pc_next_mux (
+		.MuxOut(PCNextInstruction),
+		.MuxIn1(PCBranchOrNot),
+		.MuxIn2({PCPlus4[31:28], PCJump[27:0]}),
+		.MuxIn3(readData1Reg),
+		.sel(Jump)
+	);
 	
 	mux_2x1 #(.N(32)) SrcBmux(
 		.MuxOut(SrcB),
@@ -139,62 +129,58 @@ module Single_Cycle_MIPS_Microprocessor #(
 		.sel(ALUSrc)
 	);
 	
-	assign SrcA = readData1Reg;
-	assign shamt = instruction[10:6];
 	ALU_32_bits ALU(
 		.ALUResult(ALUResult),
 		.Zero(zero),
-		.SrcA(SrcA),
+		.SrcA(readData1Reg),
 		.SrcB(SrcB),
 		.ALUControl(ALUControl),
 		.is_signed(is_signed),
-		.shamt(shamt)
+		.shamt(instruction[10:6])
 	);
 
-	// Multiplication Unit (Modular, external block)
-	wire [63:0] mul_product;
 	multiplier multiplier_inst(
-		.a(SrcA),
+		.a(readData1Reg),
 		.b(readData2Reg),
 		.is_signed(is_signed),
 		.product(mul_product)
 	);
 
-	// Division Unit (Modular, external block)
-	wire [31:0] div_quotient;
-	wire [31:0] div_remainder;
 	divider divider_inst(
-		.a(SrcA),
+		.a(readData1Reg),
 		.b(readData2Reg),
 		.is_signed(is_signed),
 		.quotient(div_quotient),
 		.remainder(div_remainder)
 	);
 
-	// Select inputs for special HI and LO registers
-	wire [31:0] hi_in = (HILOSrc == 2'b10) ? SrcA :
-	                    (HILOSrc == 2'b01) ? div_remainder :
-	                    mul_product[63:32];
-	wire [31:0] lo_in = (HILOSrc == 2'b10) ? SrcA :
-	                    (HILOSrc == 2'b01) ? div_quotient :
-	                    mul_product[31:0];
+	mux_3x1 #(.N(32)) hi_mux (
+		.MuxOut(hi_in),
+		.MuxIn1(mul_product[63:32]),
+		.MuxIn2(div_remainder),
+		.MuxIn3(readData1Reg),
+		.sel(HILOSrc)
+	);
 
-	// Special HI and LO registers
-	reg [31:0] HI, LO;
-	always @(posedge clock or negedge reset) begin
-		if (!reset) begin
-			HI <= 32'b0;
-			LO <= 32'b0;
-		end
-		else begin
-			if (hi_write) HI <= hi_in;
-			if (lo_write) LO <= lo_in;
-		end
-	end
+	mux_3x1 #(.N(32)) lo_mux (
+		.MuxOut(lo_in),
+		.MuxIn1(mul_product[31:0]),
+		.MuxIn2(div_quotient),
+		.MuxIn3(readData1Reg),
+		.sel(HILOSrc)
+	);
+
+	HILO_Regs hilo_regs_inst(
+		.HI(HI),
+		.LO(LO),
+		.hi_in(hi_in),
+		.lo_in(lo_in),
+		.hi_write(hi_write),
+		.lo_write(lo_write),
+		.clock(clock),
+		.reset(reset)
+	);
 	
-	// Extract opcode and funct fields from instruction
-    assign opcode = instruction[31:26];
-    assign funct  = instruction[5:0];
 	ControlUnit controlunit(
 		.RegDst(RegDst),       
 		.ALUSrc(ALUSrc),       
@@ -212,11 +198,10 @@ module Single_Cycle_MIPS_Microprocessor #(
 		.hi_write(hi_write),
 		.lo_write(lo_write),
 		.HILOSrc(HILOSrc),
-		.opcode(opcode),      
-		.funct(funct)    
+		.opcode(instruction[31:26]),      
+		.funct(instruction[5:0])    
 	);
 	
-	assign WriteDataRam = readData2Reg;
 	Data_Memory #(
 		.START_ADDR(DM_START_ADDR),
 		.END_ADDR(DM_END_ADDR)
@@ -226,17 +211,20 @@ module Single_Cycle_MIPS_Microprocessor #(
 		.Clock(clock),
 		.Reset(reset),
 		.Address(ALUResult),      
-		.WriteData(WriteDataRam),    
+		.WriteData(readData2Reg),    
 		.WriteEnable(MemWrite),
 		.MemSize(MemSize),
 		.MemUnsigned(MemUnsigned)
 	);
 	
-	// Select register write data: ALUResult (000), readDataRam (001), PCPlus4 (010), HI (011), LO (100)
-	assign writeDataReg = (MemToReg == 3'b100) ? LO :
-	                      (MemToReg == 3'b011) ? HI :
-	                      (MemToReg == 3'b010) ? PCPlus4 :
-	                      (MemToReg == 3'b001) ? readDataRam :
-	                      ALUResult;
+	mux_5x1 #(.N(32)) write_data_mux (
+		.MuxOut(writeDataReg),
+		.MuxIn1(ALUResult),
+		.MuxIn2(readDataRam),
+		.MuxIn3(PCPlus4),
+		.MuxIn4(HI),
+		.MuxIn5(LO),
+		.sel(MemToReg)
+	);
 
 endmodule
