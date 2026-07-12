@@ -1,6 +1,6 @@
 # MIPS Supported ISA Reference Manual
 
-This document details all the instructions supported by our Single Cycle MIPS Microprocessor implementation, including their formats, opcodes, funct codes, and behavior.
+This document details all the instructions supported by our MIPS Processor implementation, including their formats, opcodes, funct codes, and behavior.
 
 ---
 

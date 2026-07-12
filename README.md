@@ -1,11 +1,11 @@
-# Single-Cycle MIPS Microprocessor with Parameterized Memory Map & MMIO Preparation
+# MIPS Processor with Parameterized Memory Map & MMIO Preparation
 
-A synthesizable, 32-bit Single-Cycle MIPS Microprocessor implemented in Verilog. This CPU features an optimized, parameterized memory architecture designed to support dynamic test loading and prepare the design for Memory-Mapped I/O (MMIO).
+A synthesizable, 32-bit MIPS Processor implemented in Verilog. This CPU features an optimized, parameterized memory architecture designed to support dynamic test loading and prepare the design for Memory-Mapped I/O (MMIO). Currently, it features a single-cycle implementation, with plans to expand to a pipelined architecture.
 
 ---
 
 ## 1. Architecture Overview
-This processor executes one instruction per clock cycle (single-cycle architecture) and contains the following core hardware blocks:
+The initial stage of this processor is designed as a single-cycle architecture (executing one instruction per clock cycle) and contains the following core hardware blocks:
 - **Program Counter (PC)**: Holds the current instruction address, initialized to `32'h0` upon reset.
 - **Instruction Memory (ROM)**: A synthesizable byte-addressable ROM containing the instruction program.
 - **Register File**: Contains 32 general-purpose 32-bit registers (register `$0` is hardwired to `0`). Also contains special-purpose `HI` and `LO` registers for multiply/divide operations.
