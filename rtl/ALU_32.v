@@ -1,5 +1,5 @@
 module ALU_32_bits(
-	output reg [31:0]ALUResult,
+	output reg [63:0]ALUResult,
 	output reg Zero,
 	input [31:0]SrcA,SrcB,
 	input [3:0] ALUControl,
@@ -21,7 +21,8 @@ module ALU_32_bits(
 			  SRAV = 4'b1011,
 			  XOR  = 4'b1100,
 			  LUI  = 4'b1101,
-			  NOR  = 4'b1110;
+			  NOR  = 4'b1110,
+			  DIV  = 4'b1111;
 
 	wire [32:0] adder_sub_sum;
 	wire is_sub = (ALUControl == SUB || ALUControl == SLT);
@@ -34,24 +35,44 @@ module ALU_32_bits(
 		.sum(adder_sub_sum)
 	);
 
+	wire [63:0] mul_product;
+	wire [31:0] div_quotient;
+	wire [31:0] div_remainder;
+
+	multiplier multiplier_inst(
+		.a(SrcA),
+		.b(SrcB),
+		.is_signed(is_signed),
+		.product(mul_product)
+	);
+
+	divider divider_inst(
+		.a(SrcA),
+		.b(SrcB),
+		.is_signed(is_signed),
+		.quotient(div_quotient),
+		.remainder(div_remainder)
+	);
+
 	always @(*)begin
 		case (ALUControl)
-			AND  : ALUResult = SrcA & SrcB ;
-			OR   : ALUResult = SrcA | SrcB ;
-			ADD  : ALUResult = adder_sub_sum[31:0] ;
-			SLL  : ALUResult = SrcB << shamt ;
-			SUB  : ALUResult = adder_sub_sum[31:0] ;
-			MULT : ALUResult = SrcA * SrcB ;
-			SLT  : ALUResult = ((SrcA[31] == SrcB[31]) ? adder_sub_sum[31] : (is_signed ? SrcA[31] : SrcB[31])) ? 32'b1 : 32'b0;
-			SRL  : ALUResult = SrcB >> shamt ;
-			SRA  : ALUResult = $signed(SrcB) >>> shamt ;
-			SLLV : ALUResult = SrcB << SrcA[4:0] ;
-			SRLV : ALUResult = SrcB >> SrcA[4:0] ;
-			SRAV : ALUResult = $signed(SrcB) >>> SrcA[4:0] ;
-			XOR  : ALUResult = SrcA ^ SrcB ;
-			LUI  : ALUResult = SrcB ;
-			NOR  : ALUResult = ~(SrcA | SrcB) ;
-			default: ALUResult = 32'b0;
+			AND  : ALUResult = {32'b0, SrcA & SrcB} ;
+			OR   : ALUResult = {32'b0, SrcA | SrcB} ;
+			ADD  : ALUResult = {32'b0, adder_sub_sum[31:0]} ;
+			SLL  : ALUResult = {32'b0, SrcB << shamt} ;
+			SUB  : ALUResult = {32'b0, adder_sub_sum[31:0]} ;
+			MULT : ALUResult = mul_product ;
+			DIV  : ALUResult = {div_remainder, div_quotient} ;
+			SLT  : ALUResult = ((SrcA[31] == SrcB[31]) ? adder_sub_sum[31] : (is_signed ? SrcA[31] : SrcB[31])) ? 64'b1 : 64'b0;
+			SRL  : ALUResult = {32'b0, SrcB >> shamt} ;
+			SRA  : ALUResult = {32'b0, $signed(SrcB) >>> shamt} ;
+			SLLV : ALUResult = {32'b0, SrcB << SrcA[4:0]} ;
+			SRLV : ALUResult = {32'b0, SrcB >> SrcA[4:0]} ;
+			SRAV : ALUResult = {32'b0, $signed(SrcB) >>> SrcA[4:0]} ;
+			XOR  : ALUResult = {32'b0, SrcA ^ SrcB} ;
+			LUI  : ALUResult = {32'b0, SrcB} ;
+			NOR  : ALUResult = {32'b0, ~(SrcA | SrcB)} ;
+			default: ALUResult = 64'b0;
 		endcase
 		if(ALUResult == 0) Zero = 1'b1; else Zero = 1'b0;
 	

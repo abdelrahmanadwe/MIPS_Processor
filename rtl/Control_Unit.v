@@ -19,7 +19,7 @@ module ControlUnit(
     input [5:0] funct        // Function field from the instruction (for R-type)
 );
 
-    wire [2:0] ALUOp;  // ALU operation (expanded to 3 bits)
+    wire [3:0] ALUOp;  // ALU operation (expanded to 4 bits)
     // Instantiate Main Decoder
     MainDecoder maindecoder(
 		.ALUOp(ALUOp),  

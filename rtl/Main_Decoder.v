@@ -1,5 +1,5 @@
 module MainDecoder(
-    output reg [2:0] ALUOp,  // Control signal for the ALU operation
+    output reg [3:0] ALUOp,  // Control signal for the ALU operation (expanded to 4 bits)
     output reg [2:0] MemToReg, // Control signal to select register write data: 000=ALUResult, 001=ReadDataRam, 010=PCPlus4, 011=HI, 100=LO
     output reg MemWrite,     // Control signal to enable memory write
     output reg Branch,       // Control signal to indicate a branch
@@ -17,11 +17,11 @@ module MainDecoder(
 	input [5:0] opcode,      // Opcode field from the instruction
 	input [5:0] funct        // Funct field from the instruction (for jr and jalr R-type)
 );
-
+ 
     always @(*) begin
         // Default control signal values to prevent latches
         Jump        = 2'b00;
-        ALUOp       = 3'b000;
+        ALUOp       = 4'b0000;
         MemWrite    = 1'b0;
         RegWrite    = 1'b0;
         RegDst      = 2'b00;
@@ -67,30 +67,39 @@ module MainDecoder(
                     HILOSrc  = 2'b10; // From rs
                 end
                 else if (funct == 6'b011000) begin // mult (Multiply)
+                    ALUOp    = 4'b0010;
                     hi_write = 1'b1;
                     lo_write = 1'b1;
                     HILOSrc  = 2'b00; // From multiplier
                 end
                 else if (funct == 6'b011001) begin // multu (Multiply Unsigned)
+                    ALUOp    = 4'b0010;
                     hi_write = 1'b1;
                     lo_write = 1'b1;
                     HILOSrc  = 2'b00; // From multiplier
                 end
                 else if (funct == 6'b011010) begin // div (Divide)
+                    ALUOp    = 4'b0010;
                     hi_write = 1'b1;
                     lo_write = 1'b1;
                     HILOSrc  = 2'b01; // From divider
                 end
                 else if (funct == 6'b011011) begin // divu (Divide Unsigned)
+                    ALUOp    = 4'b0010;
                     hi_write = 1'b1;
                     lo_write = 1'b1;
                     HILOSrc  = 2'b01; // From divider
                 end
                 else begin // Standard R-type
-                    ALUOp    = 3'b010;
+                    ALUOp    = 4'b0010;
                     RegWrite = 1'b1;
                     RegDst   = 2'b01;
                 end
+            end
+            6'b011100: begin // mul (SPECIAL2 opcode)
+                ALUOp    = 4'b1000;
+                RegWrite = 1'b1;
+                RegDst   = 2'b01;
             end
             6'b100011: begin // lw
                 RegWrite = 1'b1;
@@ -102,11 +111,11 @@ module MainDecoder(
                 ALUSrc   = 1'b1;
             end
             6'b000100: begin // beq
-                ALUOp    = 3'b001;
+                ALUOp    = 4'b0001;
                 Branch   = 1'b1;
             end
             6'b000101: begin // bne (Branch on Not Equal)
-                ALUOp    = 3'b001;
+                ALUOp    = 4'b0001;
                 Branch   = 1'b1;
                 Bne      = 1'b1;
             end
@@ -175,35 +184,35 @@ module MainDecoder(
             6'b001010: begin // slti (Set Less Than Immediate)
                 RegWrite = 1'b1;
                 ALUSrc   = 1'b1;
-                ALUOp    = 3'b110;
+                ALUOp    = 4'b0110;
             end
             6'b001011: begin // sltiu (Set Less Than Immediate Unsigned)
                 RegWrite = 1'b1;
                 ALUSrc   = 1'b1;
-                ALUOp    = 3'b110;
+                ALUOp    = 4'b0110;
             end
             6'b001100: begin // andi (AND Immediate)
                 RegWrite = 1'b1;
                 ALUSrc   = 1'b1;
-                ALUOp    = 3'b011;
+                ALUOp    = 4'b0011;
                 ExtOp    = 2'b00; // Zero-extend
             end
             6'b001101: begin // ori (OR Immediate)
                 RegWrite = 1'b1;
                 ALUSrc   = 1'b1;
-                ALUOp    = 3'b100;
+                ALUOp    = 4'b0100;
                 ExtOp    = 2'b00; // Zero-extend
             end
             6'b001110: begin // xori (XOR Immediate)
                 RegWrite = 1'b1;
                 ALUSrc   = 1'b1;
-                ALUOp    = 3'b101;
+                ALUOp    = 4'b0101;
                 ExtOp    = 2'b00; // Zero-extend
             end
             6'b001111: begin // lui (Load Upper Immediate)
                 RegWrite = 1'b1;
                 ALUSrc   = 1'b1;
-                ALUOp    = 3'b111;
+                ALUOp    = 4'b0111;
                 ExtOp    = 2'b10; // Upper Immediate
             end
             default: ;

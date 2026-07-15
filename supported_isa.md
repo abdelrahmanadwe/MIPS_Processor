@@ -88,3 +88,13 @@ J-type instructions use target offsets shift-lefted by 2 to jump to a large rang
 - **Register `$31` (`$ra`)**: Return address register. Written to automatically by `jal` and `jalr` instructions, but can also be read/written by general-purpose software (e.g. for context saving/restoring).
 - **Registers `HI` and `LO`**: 32-bit special-purpose registers holding results of multiplication and division. Updated automatically by `mult`, `multu`, `div`, and `divu`, or explicitly using `mthi` and `mtlo` instructions. Can be read using `mfhi` and `mflo` instructions.
 
+---
+
+## 5. Architectural Design Notes
+
+### Centralized ALU Integration for Multiplier & Divider
+In our implementation, the physical `multiplier` and `divider` hardware blocks are instantiated directly inside the **ALU** (`ALU_32_bits`) instead of being separate top-level processor components. This architecture has several key advantages:
+1. **Resource Reuse**: The shared 32-bit standard `mul` instruction (which writes its lower 32-bit result to the general register file) and the 64-bit R-type multiplication instructions (`mult`/`multu`) both share the exact same internal hardware multiplier resources, reducing redundant silicon area.
+2. **Simplified Control**: Centralizing all mathematical execution units within the ALU simplifies the instruction decoding, as the Main Decoder and ALU Decoder handle execution unit selection in a single execution stage.
+
+

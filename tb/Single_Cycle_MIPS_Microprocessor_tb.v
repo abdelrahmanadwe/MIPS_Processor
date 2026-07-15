@@ -15,6 +15,34 @@ module Single_Cycle_MIPS_Microprocessor_tb();
 		forever #10 clock = ~clock;
 	end
 
+	// always @(negedge clock) begin
+	// 	if (reset) begin
+	// 		$display("Time=%0t | PC=0x%h | Instr=0x%h | t0=0x%h | t1=0x%h | t2=0x%h | t3=0x%h | t4=0x%h | t5=0x%h | HI=0x%h | LO=0x%h",
+	// 			$time, MIPS.PCCurrentInstruction, MIPS.instruction,
+	// 			MIPS.registers.registers[8], MIPS.registers.registers[9], MIPS.registers.registers[10],
+	// 			MIPS.registers.registers[11], MIPS.registers.registers[12], MIPS.registers.registers[13],
+	// 			MIPS.hilo_regs_inst.HI, MIPS.hilo_regs_inst.LO);
+	// 	end
+	// end
+
+	always @(negedge clock) begin
+		if (reset) begin
+			if (MIPS.registers.registers[16][15:0] == 16'hD08E) begin
+				$display("Simulation Finished!");
+				$display("TestValue (RAM[1:0]) = %0d", TestValue);
+				$display("Register $s0 ($16)   = 32'h%h (%0d)", MIPS.registers.registers[16], MIPS.registers.registers[16]);
+				$display("RESULT: TEST PASSED!");
+				$finish;
+			end else if (MIPS.registers.registers[16][15:0] == 16'hDEAD) begin
+				$display("Simulation Finished!");
+				$display("TestValue (RAM[1:0]) = %0d", TestValue);
+				$display("Register $s0 ($16)   = 32'h%h (%0d)", MIPS.registers.registers[16], MIPS.registers.registers[16]);
+				$display("RESULT: TEST FAILED (DEAD)!");
+				$finish;
+			end
+		end
+	end
+
 	// Dynamic test memory loading
 	reg [1023:0] test_file;
 	initial begin
@@ -33,7 +61,7 @@ module Single_Cycle_MIPS_Microprocessor_tb();
 	end
 
 	initial begin
-		#30000; // Run for 30us to allow longer tests to complete
+		#500000; // Run for 500us to allow longer tests like test7 to complete
 		$display("Simulation Finished!");
 		$display("TestValue (RAM[1:0]) = %0d", TestValue);
 		$display("Register $s0 ($16)   = 32'h%h (%0d)", MIPS.registers.registers[16], MIPS.registers.registers[16]);

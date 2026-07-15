@@ -2,3 +2,6 @@ transcript
 vsim.wlf
 work/
 *.log
+docs/
+*.pdf
+

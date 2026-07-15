@@ -129,29 +129,20 @@ module Single_Cycle_MIPS_Microprocessor #(
 		.sel(ALUSrc)
 	);
 	
+	wire [63:0] ALUResult64;
+	assign ALUResult     = ALUResult64[31:0];
+	assign mul_product   = ALUResult64;
+	assign div_quotient  = ALUResult64[31:0];
+	assign div_remainder = ALUResult64[63:32];
+
 	ALU_32_bits ALU(
-		.ALUResult(ALUResult),
+		.ALUResult(ALUResult64),
 		.Zero(zero),
 		.SrcA(readData1Reg),
 		.SrcB(SrcB),
 		.ALUControl(ALUControl),
 		.is_signed(is_signed),
 		.shamt(instruction[10:6])
-	);
-
-	multiplier multiplier_inst(
-		.a(readData1Reg),
-		.b(readData2Reg),
-		.is_signed(is_signed),
-		.product(mul_product)
-	);
-
-	divider divider_inst(
-		.a(readData1Reg),
-		.b(readData2Reg),
-		.is_signed(is_signed),
-		.quotient(div_quotient),
-		.remainder(div_remainder)
 	);
 
 	mux_3x1 #(.N(32)) hi_mux (

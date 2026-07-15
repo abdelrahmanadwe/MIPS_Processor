@@ -27,6 +27,8 @@ if {$test_name == "test1"} {
     set mem_file "Tests/test8/Test8_Exception.inst.mem"
 } elseif {$test_name == "test9"} {
     set mem_file "Tests/test9/Test9_Soc.mem"
+} elseif {$test_name == "test10"} {
+    set mem_file "Tests/test10/Test10_MemOps.mem"
 } elseif {$test_name == "instructions1"} {
     set mem_file "Tests/instructions1/instructions1.mem"
 } else {
