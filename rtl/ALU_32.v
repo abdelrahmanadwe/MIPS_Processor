@@ -1,6 +1,7 @@
 module ALU_32_bits(
 	output reg [63:0]ALUResult,
 	output reg Zero,
+	output reg Overflow,
 	input [31:0]SrcA,SrcB,
 	input [3:0] ALUControl,
 	input is_signed,
@@ -55,12 +56,19 @@ module ALU_32_bits(
 	);
 
 	always @(*)begin
+		Overflow = 1'b0;
 		case (ALUControl)
 			AND  : ALUResult = {32'b0, SrcA & SrcB} ;
 			OR   : ALUResult = {32'b0, SrcA | SrcB} ;
-			ADD  : ALUResult = {32'b0, adder_sub_sum[31:0]} ;
+			ADD  : begin
+				ALUResult = {32'b0, adder_sub_sum[31:0]} ;
+				Overflow = (SrcA[31] == SrcB[31]) && (adder_sub_sum[31] != SrcA[31]);
+			end
 			SLL  : ALUResult = {32'b0, SrcB << shamt} ;
-			SUB  : ALUResult = {32'b0, adder_sub_sum[31:0]} ;
+			SUB  : begin
+				ALUResult = {32'b0, adder_sub_sum[31:0]} ;
+				Overflow = (SrcA[31] != SrcB[31]) && (adder_sub_sum[31] != SrcA[31]);
+			end
 			MULT : ALUResult = mul_product ;
 			DIV  : ALUResult = {div_remainder, div_quotient} ;
 			SLT  : ALUResult = ((SrcA[31] == SrcB[31]) ? adder_sub_sum[31] : (is_signed ? SrcA[31] : SrcB[31])) ? 64'b1 : 64'b0;

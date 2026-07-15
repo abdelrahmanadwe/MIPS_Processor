@@ -135,9 +135,12 @@ module Single_Cycle_MIPS_Microprocessor #(
 	assign div_quotient  = ALUResult64[31:0];
 	assign div_remainder = ALUResult64[63:32];
 
+	wire overflow;
+
 	ALU_32_bits ALU(
 		.ALUResult(ALUResult64),
 		.Zero(zero),
+		.Overflow(overflow),
 		.SrcA(readData1Reg),
 		.SrcB(SrcB),
 		.ALUControl(ALUControl),
